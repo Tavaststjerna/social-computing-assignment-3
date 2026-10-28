@@ -1,0 +1,39 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<section class="col-lg-8 mx-auto my-4" aria-labelledby="practice-title">
+  <div class="card shadow-sm"><div class="card-body p-4">
+    <h1 class="h3" id="practice-title">Practice area</h1>
+    <p>Try a post or a reply before joining a real conversation. You can make mistakes here and start again.</p>
+    <div class="alert alert-info">Private practice only. Nothing here is published or saved as a post or comment. Your risk score and weekly goal do not change.</div>
+    <form action="{{ url_for('sandbox') }}" method="POST">
+      <label for="practice-kind" class="form-label">What would you like to practise?</label>
+      <select class="form-select mb-3" name="kind" id="practice-kind">
+        <option value="post" {% if kind == 'post' %}selected{% endif %}>Writing a post</option>
+        <option value="comment" {% if kind == 'comment' %}selected{% endif %}>Writing a reply</option>
+      </select>
+      <p class="small text-muted">Post idea: share an interest or ask a clear question. Reply idea: someone says, "I am new here and enjoy making things." How would you welcome them?</p>
+      <label for="practice-content" class="form-label">Your practice text</label>
+      <textarea class="form-control mb-3" name="content" id="practice-content" rows="5" maxlength="5000" required>{{ content }}</textarea>
+      <button type="submit" class="btn btn-primary">{{ 'Try again' if result else 'Preview practice' }}</button>
+      <a href="{{ url_for('sandbox') }}" class="btn btn-light">Clear practice</a>
+    </form>
+    {% if result %}
+    <section class="mt-4" aria-labelledby="practice-preview" aria-live="polite">
+      <h2 class="h5" id="practice-preview">Practice {{ kind }} preview</h2>
+      <p>This is how the text would look after the community's moderation checks.</p>
+      <div class="border rounded bg-light p-3 mb-3" style="white-space: pre-wrap; overflow-wrap: anywhere">{{ result.content }}</div>
+      {% if result.reasons %}
+      <div class="alert alert-warning"><p>You can change your text and try again:</p>
+        <ul>{% for reason in result.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+      </div>
+      {% else %}<p class="text-success">No rule violations detected. Nothing has been published.</p>{% endif %}
+      <p class="small text-muted">Practice content score: {{ '%.1f'|format(result.score) }}. This is feedback only and does not affect your account.</p>
+    </section>
+    {% endif %}
+    <hr>
+    <p>Keep messages respectful, ask clear questions, and avoid sharing private information.</p>
+    <a href="{{ url_for('rules') }}">Read the rules</a> ·
+    <a href="{{ url_for('feed', sort='introductions') }}">Ready? Go to introductions</a>
+  </div></div>
+</section>
+{% endblock %}

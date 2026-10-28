@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added viewport for responsiveness -->
+  <title>{{ title or "Mini Social" }}</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+  <!-- Custom CSS -->
+  <link href="/static/skeuostrap.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='custom_style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='switch.css') }}">
+
+</head>
+<body class="bg-light">
+
+<!-- Bootstrap Navbar -->
+<nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm">
+  <div class="container-fluid px-lg-5">
+  
+    <!-- Navbar Brand/Logo -->
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      Mini Social
+    </a>
+
+    <!-- Navbar Toggler for mobile -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Navbar Links -->
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item">
+          <a href="/" class="nav-link">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/rules">Rules</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/privacy">Privacy</a>
+        </li>
+
+        {% if session.get('username') == 'admin' %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Moderation</a></li>
+        {% endif %}
+
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('feed', sort='introductions') }}">Introductions</a></li>
+        {% if session.get('user_id') %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('sandbox') }}">Practice</a></li>
+        {% endif %}
+        <!-- Check if user is logged in -->
+        {% if session.get('user_id') %}
+          <!-- If logged in, show User Dropdown Menu -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <!-- Display the username from the session -->
+              {{ session.get('username') }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+              <!-- Link to user's profile page -->
+              <li><a class="dropdown-item" href="{{ url_for('user_profile', username=session.get('username')) }}">My Profile</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/logout">Logout</a></li>
+            </ul>
+          </li>
+        {% else %}
+          <!-- If not logged in, show Login and Sign Up buttons -->
+          <li class="nav-item">
+            <a class="nav-link" href="/login">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-primary btn-sm" href="/signup">Sign Up</a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content Area -->
+<div class="content-wrapper py-3">
+  <div class="container">
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div id="flash-messages" class="position-fixed top-3 end-0 p-3" style="z-index: 1050;">
+            {% for category, message in messages %}
+                <div class="toast align-items-center text-bg-{{ category }} border-0 mb-3 show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar bg-white" role="progressbar" style="width: 100%;" id="progress-bar-{{ loop.index }}"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+{% include "footer.html.j2" %}
+</body>
+</html>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const duration = 4000; // Time in milliseconds
+        const toasts = document.querySelectorAll('.toast');
+        
+        toasts.forEach((toast, index) => {
+            // Animate the progress bar
+            const progressBar = document.querySelector(`#progress-bar-${index + 1}`);
+            if (progressBar) {
+                progressBar.style.transition = `width ${duration}ms linear`;
+                progressBar.style.width = '0%';
+            }
+            
+            // Auto-dismiss after the specified duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, duration);
+        });
+    });
+</script>
+

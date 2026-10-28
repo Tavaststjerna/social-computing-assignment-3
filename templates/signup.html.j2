@@ -1,0 +1,38 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<div class="container col-md-6 mx-auto mt-5">
+  <div class="card p-4">
+    <h2 class="mb-4 text-center">Sign Up</h2>
+    <form method="POST">
+      <div class="mb-3">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" class="form-control" id="username" name="username" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+      </div>
+      <div class="mb-3">
+        <label for="location" class="form-label">Location</label>
+        <input type="text" class="form-control" id="location" name="location">
+      </div>
+      <div class="mb-3">
+        <label for="birthdate" class="form-label">Birthdate</label>
+        <input type="date" class="form-control" id="birthdate" name="birthdate">
+      </div>
+      <div class="mb-3">
+        <label for="profile" class="form-label">Profile</label>
+        <textarea class="form-control" id="profile" name="profile" rows="3"></textarea>
+      </div>
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+      </div>
+    </form>
+    <div class="text-center mt-3">
+      <small class="text-muted">
+        Already have an account? <a href="/login">Login</a>
+      </small>
+    </div>
+  </div>
+</div>
+{% endblock %}

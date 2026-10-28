@@ -1,0 +1,309 @@
+{% extends "base.html.j2" %}
+{% block content %}
+{% from "macros/user_macros.html.j2" import user_display %}
+
+<div class="align-center text-center">
+  <img src="{{ url_for('static', filename='icon.png') }}" alt="Logo" style="height: 64px;" class="mb-4">
+</div>
+
+{% if session.get('user_id') and current_sort == 'new' %}
+<section class="col-md-8 mx-auto alert alert-info" aria-label="Getting started">
+  <h2 class="h5">New here? Start with a hello.</h2>
+  <p>Introduce yourself, meet other members, or try writing privately before you post.</p>
+  <a class="btn btn-light" href="{{ url_for('feed', sort='introductions') }}">Meet and welcome members</a>
+  <a class="btn btn-light" href="{{ url_for('sandbox') }}">Try the practice area</a>
+</section>
+{% endif %}
+{% if session.get('user_id') %}
+<div class="col-md-8 mx-auto mb-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      {% if current_sort == 'introductions' %}
+      <h1 class="h4">Introduce yourself</h1>
+      <p>Tell us about an interest and what you would like to learn here. You do not need to share private details.</p>
+      <p class="small text-muted">Your introduction is public and shows your username. Members can welcome you in the comments.</p>
+      {% else %}
+      <h5 class="card-title">Create a new post</h5>
+      {% endif %}
+      <form action="{{ url_for('add_post') }}" method="POST">
+        {% if current_sort == 'introductions' %}<input type="hidden" name="is_introduction" value="1">{% endif %}
+        <div class="mb-3">
+          <textarea class="form-control" name="content" rows="3" placeholder="{{ 'Hi, I am new here. I enjoy ... and would like to learn ...' if current_sort == 'introductions' else 'What is on your mind?' }}" required></textarea>
+        </div>
+        {% if current_sort != 'introductions' %}
+        <!-- Anonymity applies to the whole discussion, including its replies. -->
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="is_anonymous" value="1" id="is-anonymous" aria-describedby="anonymous-help">
+          <label class="form-check-label" for="is-anonymous">Start an anonymous discussion</label>
+        </div>
+        <p class="small text-muted" id="anonymous-help">Your name and all commenters' names will be hidden from other members. Administrators can still see authors. Anonymous discussions appear under All, not Following or profiles.</p>
+        {% endif %}
+        <button type="submit" class="btn btn-primary float-end">{{ 'Post introduction' if current_sort == 'introductions' else 'Post' }}</button>
+        <button type="submit" name="intent" value="preview" class="btn btn-light">Check before posting</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Personal weekly contribution goal: Chapter 2, Design Claim 13. -->
+{% if weekly_goal and current_sort not in ['recommended', 'introductions'] %}
+<div class="col-md-8 mx-auto mb-4">
+  <section class="card shadow-sm" aria-labelledby="weekly-goal-title">
+    <div class="card-body">
+      <h3 id="weekly-goal-title">Your weekly reply goal</h3>
+      <p class="text-muted">{{ weekly_goal.week_label }} · Weeks run Monday–Sunday (UTC).</p>
+      <p>Choose a target that challenges you but is achievable. Write useful replies to different members' posts.</p>
+      <form action="{{ url_for('set_weekly_goal') }}" method="POST" class="mb-3">
+        <label for="weekly-target" class="form-label">Number of other members' posts to reply to this week (1–50)</label>
+        <div class="d-flex gap-2">
+          <input type="number" class="form-control" style="max-width: 120px" id="weekly-target" name="target" min="1" max="50" step="1" required value="{{ weekly_goal.target if weekly_goal.target else 5 }}">
+          <button type="submit" class="btn btn-primary">{{ 'Update goal' if weekly_goal.target else 'Set goal' }}</button>
+        </div>
+      </form>
+      {% if weekly_goal.target %}
+        <p><strong>{{ weekly_goal.completed }} / {{ weekly_goal.target }} posts replied to this week</strong></p>
+        <div class="progress mb-2" role="progressbar" aria-label="Weekly reply goal" aria-valuenow="{{ weekly_goal.percent }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar" style="width: {{ weekly_goal.percent }}%">{{ weekly_goal.percent }}%</div>
+        </div>
+        {% if weekly_goal.remaining == 0 %}
+          <p class="text-success">Goal reached! Thank you for contributing to the community.</p>
+        {% else %}
+          <p>{{ weekly_goal.remaining }} more posts to reply to.</p>
+        {% endif %}
+      {% else %}
+        <p>No goal set for this week. You have replied to {{ weekly_goal.completed }} other members' posts so far.</p>
+      {% endif %}
+      <p class="small text-muted">Only you see this goal. Each post counts once, including anonymous discussions. Replies to your own posts do not count. Deleted replies do not count. Replies made earlier this week are included.</p>
+      <a class="btn btn-light" href="{{ url_for('feed', sort='unanswered', show='all') }}">Find a post that needs a reply</a>
+    </div>
+  </section>
+</div>
+{% endif %}
+
+{% if current_sort == 'introductions' %}
+  <h2 class="text-center border-bottom pb-2 mb-3">Meet the community</h2>
+  <p class="text-center">Welcome a member: read their introduction, ask a friendly question, or share an interest.</p>
+  {% if not session.get('user_id') %}<p class="text-center"><a href="{{ url_for('signup') }}">Join MiniSocial</a> to introduce yourself and reply.</p>{% endif %}
+{% elif current_sort == 'recommended' %}
+  <h2 class="text-center border-bottom pb-2 mb-3">Recommended for you</h2>
+  <p class="text-center">Up to five posts chosen from your likes, loves, laughs and the people you follow. Selected posts are shown newest first.</p>
+  <p class="text-center small text-muted">No activity yet? Start with recent posts. Anonymous discussions and posts you already reacted to are not recommended.</p>
+{% elif current_sort == 'unanswered' %}
+  <h2 class="text-center border-bottom pb-2 mb-4">
+    Needs a reply ({{ unanswered_count }})
+  </h2>
+  <p class="text-center">
+    These posts have no comments yet. Help another member by writing a useful first reply.
+  </p>
+{% else %}
+  <h2 class="text-center border-bottom pb-2 mb-4"><span>Posts</span></h2>
+{% endif %}
+
+<div class="mb-4 text-center">
+
+<!-- This is the 'sort' filter for New / Popular / Recommended / Unanswered -->
+  <div class="d-inline-flex flex-wrap gap-1 me-lg-4 mb-2" role="group" aria-label="Sort posts">
+    <a href="{{ url_for('feed', sort='introductions', show=current_show) }}" class="btn {% if current_sort == 'introductions' %}btn-primary{% else %}btn-light{% endif %}">Introductions</a>
+    <!-- The link preserves the current_show state -->
+    <a href="{{ url_for('feed', sort='new', show=current_show) }}" class="btn {% if current_sort == 'new' %}btn-primary{% else %}btn-light{% endif %}">New</a>
+    <a href="{{ url_for('feed', sort='popular', show=current_show) }}" class="btn {% if current_sort == 'popular' %}btn-primary{% else %}btn-light{% endif %}">Popular</a>
+    <a href="{{ url_for('feed', sort='recommended', show=current_show) }}" class="btn {% if current_sort == 'recommended' %}btn-primary{% else %}btn-light{% endif %}">Recommended</a>
+    <a href="{{ url_for('feed', sort='unanswered', show=current_show) }}" class="btn {% if current_sort == 'unanswered' %}btn-primary{% else %}btn-light{% endif %}">Unanswered</a>
+  </div>
+
+  <!-- This is the 'show' filter for All / Following -->
+  <!-- Following is only shown to logged in users -->
+  {% if session.get('user_id') %}
+  <div class="btn-group" role="group" aria-label="Filter posts">
+    <!-- The link preserves the current_sort state -->
+    <a href="{{ url_for('feed', sort=current_sort, show='all') }}" class="btn {% if current_show == 'all' %}btn-primary{% else %}btn-light{% endif %}">All</a>
+    <a href="{{ url_for('feed', sort=current_sort, show='following') }}" class="btn {% if current_show == 'following' %}btn-primary{% else %}btn-light{% endif %}">Following</a>
+  </div>
+   {% endif %}
+
+  
+</div>
+
+<div class="col-md-8 mx-auto">
+  {% for entry in posts %}
+  <div class="card mb-4" id="post-{{ entry.post.id }}">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">
+          {% if entry.post.is_anonymous %}
+          Anonymous member
+          {% elif entry.followed_poster %}
+          <a href="{{ url_for('user_profile', username=entry.post.username) }}">{{ user_display(entry.post.username) }}<span class="text-success p-1" data-toggle="tooltip" data-placement="top" title="You are following this user"> ✓ </span>
+</a>
+          {% else %}
+          <a href="{{ url_for('user_profile', username=entry.post.username) }}">{{ user_display(entry.post.username) }} </a>
+          {% endif %}
+        </h3>
+
+        
+        {% if session.get('user_id') == entry.post.user_id %}
+        <div class="d-flex align-items-center">
+            <small class="text-muted me-3">{{ entry.post.created_at|datetimeformat }}</small>
+            <form action="{{ url_for('delete_post', post_id=entry.post.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this post?');">
+                <button type="submit" class="btn btn-danger" title="Delete Post">
+                   delete
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <small class="text-muted">{{ entry.post.created_at|datetimeformat }}</small>
+        {% endif %}
+      </div>
+      
+      {% if entry.post.is_introduction %}<p class="mt-2 mb-1"><span class="badge bg-info text-dark">Introduction</span> Say hello and help this member feel welcome.</p>{% endif %}
+      {% if entry.post.recommendation_reason %}<p class="small text-muted mt-2">{{ entry.post.recommendation_reason }}</p>{% endif %}
+      <p class="mt-2" style="white-space: pre-wrap; overflow-wrap: anywhere">{{ entry.post.content }}</p>
+      {% if entry.post.is_anonymous %}
+        <p class="small text-muted">Anonymous discussion: focus on the shared topic. All replies hide members' names; administrators can see authors.</p>
+      {% endif %}
+
+      <!-- Reactions Display and Add Reaction Button -->
+      <div class="d-flex align-items-center mt-2 mb-2">
+        <!-- Display existing reactions -->
+        <div class="reactions-display me-2">
+            {% if entry.reactions %}
+              {% for react in entry.reactions %}
+                {% if react.reaction_type == entry.user_reaction %}
+                  <form action="{{ url_for('unreact') }}" method="post" class="d-inline">
+                    <input type="hidden" name="post_id" value="{{ entry.post.id }}">
+                    <button type="submit" class="btn btn-light text-dark me-1" title="{{ react.reaction_type|capitalize }}">
+                      {{ reaction_emojis.get(react.reaction_type, '👍') }} {{ react.count }}
+                    </button>
+                  </form>
+                {% else %}
+                  <span class=" text-dark me-1" title="{{ react.reaction_type|capitalize }}">
+                    {{ reaction_emojis.get(react.reaction_type, '👍') }} {{ react.count }}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <span class="text-muted"> No reactions yet </span>
+            {% endif %}
+        </div>
+
+        <!-- Add Reaction Dropdown Button -->
+        {% if session.get('user_id') %}
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light text-dark rounded-circle m-0" type="button" id="dropdownMenuButton-{{ entry.post.id }}" data-bs-toggle="dropdown" aria-expanded="false" title="Add Reaction" >
+            +
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{ entry.post.id }}">
+            {% for reaction_type in reaction_types %}
+            <li>
+              <form action="{{ url_for('add_reaction') }}" method="POST" class="d-inline">
+                <input type="hidden" name="post_id" value="{{ entry.post.id }}">
+                <input type="hidden" name="reaction" value="{{ reaction_type }}">
+                <button type="submit" class="dropdown-item">
+                  {{ reaction_emojis.get(reaction_type, '👍') }} {{ reaction_type|capitalize }}
+                </button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+
+
+     {% if entry.comments %}
+      <hr>
+      {% if entry.comments %}
+        <h6 class="mb-0">Comments ({{ entry.comments | count }})</h4>
+      {% else %}
+        <h6 class="mb-0">Comments</h4>
+      {% endif %}
+      <ul class="list-group list-group-flush shadow-none border-0">
+        {% for comment in entry.comments[-2:] %}
+        <li class="card shadow-none p-2 mt-2">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>{% if entry.post.is_anonymous %}Anonymous member{% else %}<a href="{{ url_for('user_profile', username=comment.username) }}">{{ user_display(comment.username) }}</a>{% endif %}</strong>
+              <p class="mb-0">{{ comment.content }}</p>
+            </div>
+            
+            {% if session.get('user_id') == comment.user_id or session.get('user_id') == entry.post.user_id %}
+            <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                <button type="submit" class="btn btn-sm btn-danger" title="Delete Comment">delete</button>
+            </form>
+            {% endif %}
+
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="d-flex justify-content-between mt-3">
+        <a href="/posts/{{ entry.post.id }}" class="btn btn-sm btn-light show-comments-btn">
+          Show all comments
+        </a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCommentModal-{{ entry.post.id }}">Add Comment</button>
+      </div>
+    </div>
+  </div>
+  
+
+  <div class="modal fade" id="addCommentModal-{{ entry.post.id }}" tabindex="-1" aria-labelledby="addCommentModalLabel-{{ entry.post.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCommentModalLabel-{{ entry.post.id }}">Add a comment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form action="/posts/{{ entry.post.id }}/comment" method="POST">
+            {% if entry.post.is_anonymous %}
+        <p class="small text-muted">Anonymous discussion: focus on the shared topic. All replies hide members' names; administrators can see authors.</p>
+      {% endif %}
+            <div class="mb-3">
+              <label for="comment-content-{{ entry.post.id }}" class="form-label">Your Comment</label>
+              <textarea class="form-control" id="comment-content-{{ entry.post.id }}" name="content" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Comment</button>
+          <button type="submit" name="intent" value="preview" class="btn btn-light mt-2">Check before posting</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  {% if current_sort == 'unanswered' %}
+    {% if unanswered_count == 0 %}
+      <p class="text-center">
+        No posts need a first reply in this view right now.
+      </p>
+    {% else %}
+      <p class="text-center">
+        No posts on this page.
+        <a href="{{ url_for('feed', sort='unanswered', show=current_show) }}">
+          Return to the first page
+        </a>
+      </p>
+    {% endif %}
+  {% else %}
+    <p class="text-center">{% if current_sort == 'recommended' and current_show == 'following' %}No eligible posts from people you follow. Follow a member or switch to All.{% elif current_sort == 'recommended' %}No eligible posts to recommend yet. Try New or return when more posts are available.{% elif current_sort == 'introductions' %}No introductions in this view yet. You can be the first to say hello.{% else %}No posts to display.{% endif %}</p>
+  {% endif %}
+  {% endfor %}
+</div>
+
+  {% if current_sort != 'recommended' %}
+  <div class="d-flex justify-content-center align-items-center my-4">
+    <a href="{{ url_for('feed', page=page-1, sort=current_sort, show=current_show) }}"
+      class="btn btn-primary {% if page <= 1 %}btn-light disabled{% endif %}">
+      &laquo; Previous
+    </a>
+    <span class="mx-3 text-muted">Page {{ page }}</span>
+    <a href="{{ url_for('feed', page=page+1, sort=current_sort, show=current_show) }}"
+      class="btn btn-primary {% if posts|length < per_page %}disabled{% endif %}">
+      Next &raquo;
+    </a>
+  </div>
+  {% endif %}
+{% endblock %}

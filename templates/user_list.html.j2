@@ -1,0 +1,31 @@
+{% extends "base.html.j2" %}
+{% block content %}
+{% from "macros/user_macros.html.j2" import user_display %}
+
+<div class="container mt-5 col-md-8 mx-auto">
+  <!-- Heading for the page -->
+  <h2 class="text-center border-bottom pb-2 mb-4">
+    <span>{{ title }} {{ user_display(user.username) }}</span>
+  </h2>
+
+  <!-- Card to contain the list of users -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      {% if users %}
+        <!-- List group for a clean, vertical list -->
+        <div >
+          {% for u in users %}
+            <a href="{{ url_for('user_profile', username=u.username) }}" class="mb-3">
+              {{ user_display(u.username) }} <br>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <!-- Message to show if there are no users to list -->
+        <p class="text-center text-muted mb-0">No {{ title|lower }} found.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

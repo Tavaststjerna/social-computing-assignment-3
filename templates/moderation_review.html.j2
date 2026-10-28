@@ -1,0 +1,44 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<section class="col-lg-8 mx-auto my-4" aria-labelledby="review-title">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h1 id="review-title" class="h3">Review before posting</h1>
+      <p class="text-muted">Your {{ kind }} has not been published. You can edit it before anyone else sees it.</p>
+      {% if result.reasons %}
+      <div class="alert alert-warning" role="status">
+        <h2 class="h5">Please check these community rules</h2>
+        <ul class="mb-2">{% for reason in result.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+        <a href="{{ url_for('rules') }}" target="_blank" rel="noopener">Read the moderation rules</a>
+      </div>
+      {% else %}
+      <div class="alert alert-success" role="status">No rule violations detected. You can publish your message.</div>
+      {% endif %}
+      <h2 class="h5">What other members will see</h2>
+      <div class="border rounded bg-light p-3 mb-3" style="white-space: pre-wrap; overflow-wrap: anywhere">{{ result.content }}</div>
+      <p class="small text-muted">Content score: {{ '%.1f'|format(result.score) }}. Publishing keeps the original for administrator review and risk scoring. Other members see only the filtered text.</p>
+      <!-- The signed token is valid only for the reviewed text, author and target. -->
+      <form action="{{ url_for('add_post') if kind == 'post' else url_for('add_comment', post_id=post_id) }}" method="POST">
+        <input type="hidden" name="review_token" value="{{ review_token }}">
+        <label for="review-content" class="form-label">Edit your {{ kind }}</label>
+        <textarea class="form-control mb-3" id="review-content" name="content" rows="5" required>{{ content }}</textarea>
+        {% if kind == 'post' and is_introduction %}
+        <input type="hidden" name="is_introduction" value="1">
+        <p class="small text-muted">This is a public introduction with your username.</p>
+        {% elif kind == 'post' %}
+        <div class="form-check mb-3">
+          <input type="checkbox" class="form-check-input" id="review-anonymous" name="is_anonymous" value="1" {% if is_anonymous %}checked{% endif %}>
+          <label class="form-check-label" for="review-anonymous">Start an anonymous discussion</label>
+        </div>
+        {% endif %}
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary" name="intent" value="preview" type="submit">Check again</button>
+          <button class="btn btn-light" name="intent" value="publish" type="submit">{{ 'Publish filtered version' if result.reasons else 'Publish' }}</button>
+          <a class="btn btn-light" href="{{ url_for('feed', sort='introductions' if is_introduction else 'new') if kind == 'post' else url_for('post_detail', post_id=post_id) }}">Cancel</a>
+        </div>
+        <p class="small text-muted mt-3 mb-0">If you change the text, we check it again before publishing. Checking or cancelling does not add to your risk score.</p>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

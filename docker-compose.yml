@@ -1,0 +1,8 @@
+version: '3'
+services:
+  app:
+    image: mini-social
+    ports:
+      - "8099:5000"
+    volumes:
+      - ./database/database.db:/python-docker/database/database.db

@@ -1,0 +1,90 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-4">Moderation & Risk Scoring Specification</h1>
+            <p class="lead text-muted">This document outlines the precise technical rules governing the automated systems for content moderation and risk score calculation. All user-submitted content and user accounts are evaluated according to these exact specifications.</p>
+        </div>
+
+        <!-- Section 1: Content Moderation -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary ">
+                <h2 class="h4 mb-0">Part 1: Content-Level Moderation</h2>
+            </div>
+            <div class="card-body">
+                <p>Each piece of user-submitted content (profiles, posts, comments) is first processed by the <strong>Content Moderation Function</strong>. This function returns two outputs: the modified (filtered) content and a numerical <strong>Content Score</strong>.</p>
+
+                <h5 class="mt-4">Stage 1.1: Severe Violation Checks</h5>
+                <p>Content is checked against high-priority violation tiers. A match results in immediate content removal and a maximum score.</p>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><strong>Rule 1.1.1 (Tier 1 Words):</strong> A case-insensitive, whole-word search is performed against the Tier 1 Word List. If a match is found, the function immediately returns the string <code>[content removed due to severe violation]</code> and a fixed Content Score of <strong>5.0</strong>.</li>
+                    <li class="list-group-item"><strong>Rule 1.1.2 (Tier 2 Phrases):</strong> If no Tier 1 match is found, a case-insensitive, whole-phrase search is performed against the Tier 2 Phrase List. If a match is found, the function immediately returns the string <code>[content removed due to spam/scam policy]</code> and a fixed Content Score of <strong>5.0</strong>.</li>
+                </ul>
+
+                <h5 class="mt-4">Stage 1.2: Scored Violations & Filtering</h5>
+                <p>If the content passes Stage 1.1, its Content Score starts at 0.0 and is incremented based on the following rules:</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Rule 1.2.1 (Tier 3 Words):</strong> Each case-insensitive, whole-word match from the Tier 3 Word List is replaced with asterisks (<code>*</code>) equal to its length. The Content Score is incremented by <strong>+2.0</strong> for each match.</li>
+                    <li class="list-group-item"><strong>Rule 1.2.2 (External Links):</strong> Each detected URL is replaced with <code>[link removed]</code>. The Content Score is incremented by <strong>+2.0</strong> for each match.</li>
+                    <li class="list-group-item"><strong>Rule 1.2.3 (Excessive Capitalization):</strong> If content has >15 alphabetic characters and >70% are uppercase, the Content Score is incremented by a fixed value of <strong>+0.5</strong>. The content is not modified.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 2: Risk Score Calculation -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success ">
+                <h2 class="h4 mb-0">Part 2: Entity-Level Risk Score Calculation</h2>
+            </div>
+            <div class="card-body">
+                <p>After individual pieces of content are scored, the system calculates a final <strong>Risk Score</strong> for posts, comments, and users. This score is used for sorting and review in the administrative dashboard.</p>
+
+                <h5 class="mt-4">Rule 2.1: Post & Comment Risk Score</h5>
+                <p>The Risk Score for an individual post or comment is determined by its Content Score, adjusted for the author's account age.</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Step 1:</strong> Calculate the <code>base_score</code> for the content using the Content Moderation Function.</li>
+                    <li class="list-group-item"><strong>Step 2:</strong> Determine the author's account age in days.</li>
+                    <li class="list-group-item"><strong>Step 3:</strong> Apply an age-based multiplier to the <code>base_score</code> to get the final <code>risk_score</code>:
+                        <ul>
+                            <li>If account age is less than 7 days, <code>risk_score = base_score * 1.5</code>.</li>
+                            <li>Otherwise, <code>risk_score = base_score</code>.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h5 class="mt-4">Rule 2.2: User Risk Score</h5>
+                <p>The Risk Score for a user is a weighted average of their content, designed to reflect their overall behavior.</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Step 1 (Profile Score):</strong> Calculate the Content Score of the user's profile text. This is the <code>profile_score</code>.</li>
+                    <li class="list-group-item"><strong>Step 2 (Post Score):</strong> Calculate the Content Score for all of the user's posts and find the average. This is the <code>average_post_score</code>. If the user has no posts, this value is 0.</li>
+                    <li class="list-group-item"><strong>Step 3 (Comment Score):</strong> Calculate the Content Score for all of the user's comments and find the average. This is the <code>average_comment_score</code>. If the user has no comments, this value is 0.</li>
+                    <li class="list-group-item"><strong>Step 4 (Combine Scores):</strong> A preliminary <code>content_risk_score</code> is calculated using the following formula:
+                        <br><code>content_risk_score = (profile_score * 1) + (average_post_score * 3) + (average_comment_score * 1)</code>
+                    </li>
+                    <li class="list-group-item"><strong>Step 5 (Apply Age Multiplier):</strong> The final <code>user_risk_score</code> is determined by applying a multiplier to the <code>content_risk_score</code> based on account age:
+                        <ul>
+                            <li>If account age < 7 days: <code>user_risk_score = content_risk_score * 1.5</code></li>
+                            <li>If account age < 30 days: <code>user_risk_score = content_risk_score * 1.2</code></li>
+                            <li>Otherwise: <code>user_risk_score = content_risk_score</code></li>
+                        </ul>
+                    </li>
+                     <li class="list-group-item"><strong>Step 6 (Final Capping):</strong> The final calculated <code>user_risk_score</code> is capped at a maximum value of <strong>5.0</strong>.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="alert alert-info" role="alert">
+            <h4 class="alert-heading">Risk Level Classification</h4>
+            <p>Finally, a risk score is translated into a human-readable label based on these thresholds:</p>
+            <ul>
+                <li><strong>HIGH:</strong> Score is 5.0 or greater.</li>
+                <li><strong>MEDIUM:</strong> Score is 3.0 to 4.99.</li>
+                <li><strong>LOW:</strong> Score is 1.0 to 2.99.</li>
+                <li><strong>NONE:</strong> Score is less than 1.0.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
